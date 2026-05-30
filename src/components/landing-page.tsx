@@ -43,7 +43,7 @@ export function LandingPage() {
             href="/dashboard"
             className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition hover:opacity-90"
           >
-            Open Dashboard
+            Sign in
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -77,7 +77,7 @@ export function LandingPage() {
                 href="/dashboard"
                 className="inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-90"
               >
-                Open the Dashboard
+                Get Started
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
@@ -88,7 +88,7 @@ export function LandingPage() {
               </a>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              Connect Gmail or Outlook on the dashboard to scan your real inbox
+              Sign in, connect Gmail or Outlook, then scan your private inbox
             </p>
           </div>
 
@@ -341,7 +341,7 @@ export function LandingPage() {
               },
               {
                 q: "How do I get started?",
-                a: "Sign in on the dashboard, connect Gmail or Outlook, and run a scan to pull your interview-related mail.",
+                a: "Sign in, connect Gmail or Outlook, and run a scan to pull your interview-related mail.",
               },
             ].map((f) => (
               <details
@@ -366,14 +366,14 @@ export function LandingPage() {
             Get your interview inbox under control.
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Open the dashboard and see what's actually waiting for you.
+            Sign in to connect your inbox and see what&apos;s actually waiting for you.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-2 rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background transition hover:opacity-90"
             >
-              Open the Dashboard
+              Get Started
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
