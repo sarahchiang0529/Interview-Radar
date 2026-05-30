@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { type ScannedEmail, type Status, type Provider } from "@/lib/interview-radar";
+import { signInWithGoogle, signInWithMicrosoft } from "@/app/actions/auth";
 
 type Filter = "all" | Status;
 
@@ -87,7 +88,11 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
   }, [loadState]);
 
   const connectProvider = (provider: "google" | "microsoft-entra-id") => {
-    window.location.href = `/api/auth/signin/${provider}?callbackUrl=${encodeURIComponent("/dashboard")}`;
+    if (provider === "google") {
+      void signInWithGoogle();
+      return;
+    }
+    void signInWithMicrosoft();
   };
 
   const disconnectProvider = async (provider: "gmail" | "outlook") => {

@@ -1,9 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowLeft, Radar, ShieldCheck } from "lucide-react";
 
-const callbackUrl = encodeURIComponent("/dashboard");
+import { signInWithGoogle, signInWithMicrosoft } from "@/app/actions/auth";
+import { authProviders } from "@/lib/auth";
 
 export function SignInForm() {
   return (
@@ -42,20 +41,48 @@ export function SignInForm() {
           </p>
 
           <div className="mt-6 space-y-3">
-            <a
-              href={`/api/auth/signin/google?callbackUrl=${callbackUrl}`}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-            >
-              <GoogleIcon />
-              Continue with Google
-            </a>
-            <a
-              href={`/api/auth/signin/microsoft-entra-id?callbackUrl=${callbackUrl}`}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-            >
-              <MicrosoftIcon />
-              Continue with Microsoft
-            </a>
+            {authProviders.google ? (
+              <form action={signInWithGoogle}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                >
+                  <GoogleIcon />
+                  Continue with Google
+                </button>
+              </form>
+            ) : (
+              <p className="rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                Google sign-in is not configured yet.
+              </p>
+            )}
+
+            {authProviders.microsoft ? (
+              <form action={signInWithMicrosoft}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
+                >
+                  <MicrosoftIcon />
+                  Continue with Outlook
+                </button>
+              </form>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-border bg-muted/50 px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-60"
+                >
+                  <MicrosoftIcon />
+                  Continue with Outlook
+                </button>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Outlook sign-in requires Microsoft OAuth keys in{" "}
+                  <code className="rounded bg-muted px-1">.env.local</code>.
+                </p>
+              </div>
+            )}
           </div>
 
           <p className="mt-6 flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">

@@ -2,18 +2,14 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import type { Provider } from "next-auth/providers";
 
-import { getDb } from "@/lib/db";
+import { getDb, schema } from "@/lib/db";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(getDb()),
-  secret: process.env.AUTH_SECRET,
-  trustHost: true,
-  pages: {
-    signIn: "/signin",
-  },
-  session: { strategy: "database" },
-  providers: [
+const providers: Provider[] = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -31,6 +27,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
+  );
+}
+
+if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+  providers.push(
     MicrosoftEntraID({
       clientId: process.env.MICROSOFT_CLIENT_ID,
       clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
@@ -48,7 +49,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
-  ],
+  );
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: DrizzleAdapter(getDb(), {
+    usersTable: schema.users,
+    accountsTable: schema.accounts,
+    sessionsTable: schema.sessions,
+    verificationTokensTable: schema.verificationTokens,
+  }),
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
+  pages: {
+    signIn: "/signin",
+  },
+  session: { strategy: "database" },
+  providers,
   callbacks: {
     session({ session, user }) {
       if (session.user && user.id) {
@@ -58,3 +75,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const authProviders = {
+  google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+  microsoft: Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET),
+};
