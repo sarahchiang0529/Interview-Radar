@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { DashboardClient } from "./dashboard-client";
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const session = await auth();
 
-  return <DashboardClient signedIn={Boolean(session?.user?.id)} userName={session?.user?.name} />;
+  if (!session?.user?.id) {
+    redirect("/signin");
+  }
+
+  return <DashboardClient userName={session.user.name} />;
 }

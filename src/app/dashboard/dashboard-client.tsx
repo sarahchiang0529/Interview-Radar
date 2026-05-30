@@ -15,7 +15,6 @@ import {
   ArchiveX,
   CalendarCheck,
   ArrowLeft,
-  LogIn,
   LogOut,
 } from "lucide-react";
 
@@ -47,13 +46,7 @@ const STATUS_META: Record<Status, { label: string; chipClass: string }> = {
   },
 };
 
-export function DashboardClient({
-  signedIn,
-  userName,
-}: {
-  signedIn: boolean;
-  userName?: string | null;
-}) {
+export function DashboardClient({ userName }: { userName?: string | null }) {
   const [emails, setEmails] = useState<ScannedEmail[]>([]);
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState<null | Provider | "all">(null);
@@ -66,11 +59,6 @@ export function DashboardClient({
   const [loading, setLoading] = useState(true);
 
   const loadState = useCallback(async () => {
-    if (!signedIn) {
-      setLoading(false);
-      return;
-    }
-
     try {
       setError(null);
       const [connectionsRes, emailsRes] = await Promise.all([
@@ -92,7 +80,7 @@ export function DashboardClient({
     } finally {
       setLoading(false);
     }
-  }, [signedIn]);
+  }, []);
 
   useEffect(() => {
     void loadState();
@@ -118,11 +106,6 @@ export function DashboardClient({
   };
 
   const runScan = async (provider: Provider | "all") => {
-    if (!signedIn) {
-      setError("Sign in to scan your inbox");
-      return;
-    }
-
     setScanning(provider);
     setError(null);
 
@@ -206,36 +189,18 @@ export function DashboardClient({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {signedIn ? (
-              <>
-                {userName && (
-                  <span className="hidden text-xs text-muted-foreground sm:inline">{userName}</span>
-                )}
-                <a
-                  href="/api/auth/signout?callbackUrl=/dashboard"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
-                >
-                  <LogOut className="h-3 w-3" />
-                  Sign out
-                </a>
-              </>
-            ) : (
-              <a
-                href="/api/auth/signin?callbackUrl=/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
-              >
-                <LogIn className="h-3 w-3" />
-                Sign in
-              </a>
+            {userName && (
+              <span className="hidden text-xs text-muted-foreground sm:inline">{userName}</span>
             )}
+            <a
+              href="/api/auth/signout?callbackUrl=/signin"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            >
+              <LogOut className="h-3 w-3" />
+              Sign out
+            </a>
           </div>
         </div>
-
-        {!signedIn && (
-          <div className="mt-4 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            Sign in, then connect Gmail and/or Outlook to scan your real inbox.
-          </div>
-        )}
 
         {error && (
           <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">

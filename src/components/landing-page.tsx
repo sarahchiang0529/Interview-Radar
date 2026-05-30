@@ -40,7 +40,7 @@ export function LandingPage() {
             </a>
           </div>
           <Link
-            href="/dashboard"
+            href="/signin"
             className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition hover:opacity-90"
           >
             Sign in
@@ -74,7 +74,7 @@ export function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/dashboard"
+                href="/signin"
                 className="inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-90"
               >
                 Get Started
@@ -370,7 +370,7 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/dashboard"
+              href="/signin"
               className="inline-flex items-center gap-2 rounded-md bg-foreground px-6 py-3 text-sm font-medium text-background transition hover:opacity-90"
             >
               Get Started

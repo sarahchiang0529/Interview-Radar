@@ -9,6 +9,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDb()),
   secret: process.env.AUTH_SECRET,
   trustHost: true,
+  pages: {
+    signIn: "/signin",
+  },
   session: { strategy: "database" },
   providers: [
     Google({
