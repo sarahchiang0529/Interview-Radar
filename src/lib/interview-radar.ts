@@ -1,6 +1,14 @@
 export type Provider = "gmail" | "outlook";
 export type Status = "ready" | "review" | "ignored" | "added";
 
+export type EmailActionItem = {
+  label: string;
+  description?: string;
+  linkText?: string;
+  url?: string;
+  deadlineNote?: string;
+};
+
 export interface ScannedEmail {
   id: string;
   provider: Provider;
@@ -9,12 +17,15 @@ export interface ScannedEmail {
   senderEmail: string;
   receivedAt: string; // ISO
   body: string;
+  bodyHtml?: string;
   company?: string;
   role?: string;
   interviewType?: string;
   dateTime?: string; // human-readable detected
   dateTimeISO?: string; // for calendar
   meetingLink?: string;
+  actionItems: EmailActionItem[];
+  reviewNotes: string[];
   confidence: number; // 0-1
   status: Status;
   reason: string;
@@ -139,8 +150,6 @@ const NON_RECRUITER_DOMAINS = [
   "beehiiv.com",
   "substack.com",
   "github.com",
-  "wealthsimple.com",
-  "o.wealthsimple.com",
 ];
 
 const DATE_REGEXES = [
@@ -232,8 +241,22 @@ function hasCareerContext(text: string) {
 export function classify(
   email: Omit<
     ScannedEmail,
-    "status" | "confidence" | "reason" | "evidence" | "dateTime" | "dateTimeISO" | "meetingLink"
+    | "status"
+    | "confidence"
+    | "reason"
+    | "evidence"
+    | "dateTime"
+    | "dateTimeISO"
+    | "meetingLink"
+    | "actionItems"
+    | "reviewNotes"
+    | "bodyHtml"
   >,
+  options?: {
+    actionItems?: EmailActionItem[];
+    reviewNotes?: string[];
+    requiresScheduling?: boolean;
+  },
 ): {
   status: Status;
   confidence: number;
@@ -258,14 +281,22 @@ export function classify(
   const hasDateTime = Boolean(dateTime && dateTimeISO);
   const automatedSender = isLikelyAutomatedSender(email.senderEmail);
   const careerContext = hasCareerContext(haystack);
+  const requiresScheduling = options?.requiresScheduling ?? false;
+  const actionEvidence = options?.actionItems?.flatMap((item) =>
+    item.linkText && item.linkText.length <= 40 ? [item.linkText] : [],
+  ) ?? [];
 
   const evidence = dedupe([
-    ...(dateTime ? [dateTime] : []),
+    ...(dateTime && !requiresScheduling ? [dateTime] : []),
     ...(meetingLink ? [meetingLink] : []),
-    ...strongHits.slice(0, 4),
-    ...schedulingHits.slice(0, 3),
+    ...strongHits.slice(0, 3),
+    ...schedulingHits.slice(0, 2),
     ...weakHits.slice(0, 2),
+    ...actionEvidence,
   ]);
+
+  const schedulingReviewReason =
+    "Needs review because this email asks you to schedule an interview, but no final interview time has been selected yet.";
 
   // 1. Account/product/finance/platform notifications should be ignored.
   // This catches emails like Wealthsimple fee schedule updates.
@@ -279,7 +310,7 @@ export function classify(
   }
 
   // 2. Automated sender + no clear interview signal = ignored.
-  if (automatedSender && strongHits.length === 0 && schedulingHits.length === 0) {
+  if (automatedSender && strongHits.length === 0 && schedulingHits.length === 0 && !requiresScheduling) {
     return {
       status: "ignored",
       confidence: 0.9,
@@ -298,8 +329,8 @@ export function classify(
     };
   }
 
-  // 4. Ready requires a strong interview signal and exact date/time.
-  if (strongHits.length > 0 && hasDateTime) {
+  // 4. Ready requires a strong interview signal, exact date/time, and no pending scheduling tasks.
+  if (strongHits.length > 0 && hasDateTime && !requiresScheduling) {
     return {
       status: "ready",
       confidence: Math.min(0.98, 0.9 + strongHits.length * 0.02 + (meetingLink ? 0.03 : 0)),
@@ -311,12 +342,14 @@ export function classify(
     };
   }
 
-  // 5. Strong interview signal but no exact date/time = review.
-  if (strongHits.length > 0) {
+  // 5. Interview signal or pending scheduling tasks without a confirmed time = review.
+  if (strongHits.length > 0 || requiresScheduling) {
     return {
       status: "review",
-      confidence: Math.min(0.86, 0.7 + strongHits.length * 0.04),
-      reason: "Needs review because this email mentions an interview, but no exact date/time was detected.",
+      confidence: Math.min(0.86, 0.72 + strongHits.length * 0.04 + (requiresScheduling ? 0.06 : 0)),
+      reason: requiresScheduling
+        ? schedulingReviewReason
+        : "Needs review because this email mentions an interview, but no exact date/time was detected.",
       evidence,
       meetingLink,
     };

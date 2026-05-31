@@ -18,7 +18,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { type ScannedEmail, type Status } from "@/lib/interview-radar";
+import { type EmailActionItem, type ScannedEmail, type Status } from "@/lib/interview-radar";
 import { signInWithGoogle } from "@/app/actions/auth";
 
 type Filter = "all" | Status;
@@ -475,21 +475,28 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
         </dl>
       )}
 
-      <p className="mt-3 text-xs text-muted-foreground">
+      <div className="mt-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Reason: </span>
         {email.reason}
-      </p>
+      </div>
 
-      {email.evidence.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {email.evidence.map((ev) => (
-            <span
-              key={ev}
-              className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
-            >
-              {ev}
-            </span>
-          ))}
+      {email.status === "review" && email.actionItems.length > 0 && (
+        <ActionItemsSection items={email.actionItems} />
+      )}
+
+      {email.status === "review" && email.reviewNotes.length > 0 && (
+        <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Notes
+          </p>
+          <ul className="mt-1.5 space-y-1 text-xs text-foreground">
+            {email.reviewNotes.map((note) => (
+              <li key={note} className="flex gap-2">
+                <span className="text-muted-foreground">•</span>
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -527,6 +534,38 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
         )}
       </div>
     </article>
+  );
+}
+
+function ActionItemsSection({ items }: { items: EmailActionItem[] }) {
+  return (
+    <div className="mt-3 rounded-md border border-[var(--warning)]/25 bg-[var(--warning)]/5 px-3 py-3">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Action items from email
+      </p>
+      <ol className="mt-2 space-y-3">
+        {items.map((item, index) => (
+          <li key={`${item.label}-${index}`} className="text-xs">
+            <p className="font-medium text-foreground">
+              {index + 1}. {item.label}
+            </p>
+            {item.url ? (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium hover:bg-accent"
+              >
+                {item.linkText ?? "Open link"}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : item.linkText ? (
+              <p className="mt-1 text-muted-foreground">Link: {item.linkText}</p>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 

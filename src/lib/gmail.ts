@@ -32,35 +32,41 @@ function decodeBase64Url(data: string) {
   return Buffer.from(normalized, "base64").toString("utf8");
 }
 
-function extractBody(message: GmailMessage): string {
+function extractBodies(message: GmailMessage): { text: string; html?: string } {
   const payload = message.payload;
-  if (!payload) return message.snippet ?? "";
+  if (!payload) return { text: message.snippet ?? "" };
 
-  const walk = (parts: GmailPart[] | undefined): string => {
-    if (!parts) return "";
+  let text = "";
+  let html = "";
+
+  const walk = (parts: GmailPart[] | undefined) => {
+    if (!parts) return;
     for (const part of parts) {
-      if (part.mimeType === "text/plain" && part.body?.data) {
-        return decodeBase64Url(part.body.data);
+      if (part.mimeType === "text/plain" && part.body?.data && !text) {
+        text = decodeBase64Url(part.body.data);
       }
-      const nested = walk(part.parts);
-      if (nested) return nested;
-    }
-    for (const part of parts) {
-      if (part.mimeType === "text/html" && part.body?.data) {
-        return decodeBase64Url(part.body.data).replace(/<[^>]+>/g, " ");
+      if (part.mimeType === "text/html" && part.body?.data && !html) {
+        html = decodeBase64Url(part.body.data);
       }
+      walk(part.parts);
     }
-    return "";
   };
 
   if (payload.body?.data) {
-    return decodeBase64Url(payload.body.data);
+    text = decodeBase64Url(payload.body.data);
   }
 
-  const fromParts = walk(payload.parts);
-  if (fromParts) return fromParts.trim();
+  walk(payload.parts);
 
-  return message.snippet ?? "";
+  if (!text && html) {
+    text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  if (!text) {
+    text = message.snippet ?? "";
+  }
+
+  return { text: text.trim(), html: html || undefined };
 }
 
 function parseSender(from: string) {
@@ -102,7 +108,7 @@ export async function fetchGmailInterviewEmails(userId: string) {
       const from = header(message.payload?.headers, "From");
       const date = header(message.payload?.headers, "Date");
       const { sender, senderEmail } = parseSender(from);
-      const body = extractBody(message);
+      const { text, html } = extractBodies(message);
 
       return classifyRawEmail({
         id: message.id,
@@ -111,7 +117,8 @@ export async function fetchGmailInterviewEmails(userId: string) {
         sender,
         senderEmail,
         receivedAt: date ? new Date(date).toISOString() : new Date().toISOString(),
-        body,
+        body: text,
+        bodyHtml: html,
       });
     }),
   );

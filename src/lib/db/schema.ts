@@ -88,6 +88,20 @@ export const scannedEmails = pgTable(
     status: emailStatusEnum("status").notNull(),
     reason: text("reason").notNull(),
     evidence: jsonb("evidence").$type<string[]>().notNull().default([]),
+    actionItems: jsonb("action_items")
+      .$type<
+        Array<{
+          label: string;
+          description?: string;
+          linkText?: string;
+          url?: string;
+          deadlineNote?: string;
+        }>
+      >()
+      .notNull()
+      .default([]),
+    reviewNotes: jsonb("review_notes").$type<string[]>().notNull().default([]),
+    bodyHtml: text("body_html"),
     sourceUrl: text("source_url").notNull(),
     calendarEventId: text("calendar_event_id"),
     calendarEventUrl: text("calendar_event_url"),
