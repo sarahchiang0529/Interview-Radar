@@ -6,7 +6,7 @@ import { listScannedEmails, scanInboxes } from "@/lib/scan-service";
 import { requireSession } from "@/lib/session";
 
 const bodySchema = z.object({
-  provider: z.enum(["gmail", "outlook", "all"]),
+  provider: z.literal("gmail").optional(),
 });
 
 export async function GET() {
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     requireSession(session);
-    const body = bodySchema.parse(await request.json());
-    const result = await scanInboxes(session.user.id, body.provider);
+    bodySchema.parse(await request.json().catch(() => ({})));
+    const result = await scanInboxes(session.user.id);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

@@ -72,7 +72,7 @@ function parseSender(from: string) {
 }
 
 export async function fetchGmailInterviewEmails(userId: string) {
-  const accessToken = await getAccessToken(userId, "gmail");
+  const accessToken = await getAccessToken(userId);
   const query = encodeURIComponent(
     'newer_than:30d (interview OR schedule OR recruiter OR calendly OR "phone screen" OR "final interview")',
   );
@@ -131,7 +131,7 @@ export async function createGoogleCalendarEvent(
     dateTimeISO?: string | null;
   },
 ) {
-  const accessToken = await getAccessToken(userId, "gmail");
+  const accessToken = await getAccessToken(userId);
 
   let start: Date;
   if (email.dateTimeISO) {

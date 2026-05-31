@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Radar, ShieldCheck } from "lucide-react";
 
-import { signInWithGoogle, signInWithMicrosoft } from "@/app/actions/auth";
+import { signInWithGoogle } from "@/app/actions/auth";
 import { authProviders } from "@/lib/auth";
 
 export function SignInForm() {
@@ -36,11 +36,11 @@ export function SignInForm() {
           </div>
 
           <p className="mt-5 text-sm text-muted-foreground">
-            Sign in to access your private inbox dashboard. Connect Gmail or Outlook after signing
-            in to scan for interview emails.
+            Sign in with Google to access your private inbox dashboard and scan Gmail for interview
+            emails.
           </p>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6">
             {authProviders.google ? (
               <form action={signInWithGoogle}>
                 <button
@@ -55,33 +55,6 @@ export function SignInForm() {
               <p className="rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                 Google sign-in is not configured yet.
               </p>
-            )}
-
-            {authProviders.microsoft ? (
-              <form action={signInWithMicrosoft}>
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-accent"
-                >
-                  <MicrosoftIcon />
-                  Continue with Outlook
-                </button>
-              </form>
-            ) : (
-              <div>
-                <button
-                  type="button"
-                  disabled
-                  className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-border bg-muted/50 px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-60"
-                >
-                  <MicrosoftIcon />
-                  Continue with Outlook
-                </button>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  Outlook sign-in requires Microsoft OAuth keys in{" "}
-                  <code className="rounded bg-muted px-1">.env.local</code>.
-                </p>
-              </div>
             )}
           </div>
 
@@ -114,17 +87,6 @@ function GoogleIcon() {
         fill="#EA4335"
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
       />
-    </svg>
-  );
-}
-
-function MicrosoftIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
-      <path fill="#F25022" d="M1 1h10v10H1z" />
-      <path fill="#7FBA00" d="M13 1h10v10H13z" />
-      <path fill="#00A4EF" d="M1 13h10v10H1z" />
-      <path fill="#FFB900" d="M13 13h10v10H13z" />
     </svg>
   );
 }

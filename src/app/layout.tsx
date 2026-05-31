@@ -11,7 +11,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "InterviewRadar — Never miss an interview email again",
   description:
-    "InterviewRadar scans your Gmail and Outlook for interview-related emails and helps you add confirmed interviews to your calendar.",
+    "InterviewRadar scans your Gmail for interview-related emails and helps you add confirmed interviews to Google Calendar.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

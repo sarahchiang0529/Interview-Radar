@@ -18,14 +18,13 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { type ScannedEmail, type Status, type Provider } from "@/lib/interview-radar";
-import { signInWithGoogle, signInWithMicrosoft } from "@/app/actions/auth";
+import { type ScannedEmail, type Status } from "@/lib/interview-radar";
+import { signInWithGoogle } from "@/app/actions/auth";
 
 type Filter = "all" | Status;
 
 type Connections = {
   gmail: boolean;
-  outlook: boolean;
 };
 
 const STATUS_META: Record<Status, { label: string; chipClass: string }> = {
@@ -50,10 +49,9 @@ const STATUS_META: Record<Status, { label: string; chipClass: string }> = {
 export function DashboardClient({ userName }: { userName?: string | null }) {
   const [emails, setEmails] = useState<ScannedEmail[]>([]);
   const [scanned, setScanned] = useState(false);
-  const [scanning, setScanning] = useState<null | Provider | "all">(null);
+  const [scanning, setScanning] = useState(false);
   const [connections, setConnections] = useState<Connections>({
     gmail: false,
-    outlook: false,
   });
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState<string | null>(null);
@@ -87,38 +85,32 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
     void loadState();
   }, [loadState]);
 
-  const connectProvider = (provider: "google" | "microsoft-entra-id") => {
-    if (provider === "google") {
-      void signInWithGoogle();
-      return;
-    }
-    void signInWithMicrosoft();
+  const connectGmail = () => {
+    void signInWithGoogle();
   };
 
-  const disconnectProvider = async (provider: "gmail" | "outlook") => {
+  const disconnectGmail = async () => {
     setError(null);
     const response = await fetch("/api/connections", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider }),
     });
     if (!response.ok) {
       const data = (await response.json()) as { error?: string };
       setError(data.error ?? "Failed to disconnect");
       return;
     }
-    setConnections((prev) => ({ ...prev, [provider]: false }));
+    setConnections({ gmail: false });
   };
 
-  const runScan = async (provider: Provider | "all") => {
-    setScanning(provider);
+  const runScan = async () => {
+    setScanning(true);
     setError(null);
 
     try {
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider: "gmail" }),
       });
       const data = (await response.json()) as {
         emails?: ScannedEmail[];
@@ -135,7 +127,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
-      setScanning(null);
+      setScanning(false);
     }
   };
 
@@ -189,8 +181,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
               InterviewRadar
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Scan Gmail and Outlook for interview emails and add confirmed interviews to your
-              calendar.
+              Scan Gmail for interview emails and add confirmed interviews to your Google Calendar.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -221,9 +212,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           </h2>
           <div className="mt-2 flex flex-wrap gap-2">
             <QuickLink href="https://mail.google.com" label="Open Gmail" />
-            <QuickLink href="https://outlook.office.com/mail" label="Open Outlook" />
             <QuickLink href="https://calendar.google.com" label="Open Google Calendar" />
-            <QuickLink href="https://outlook.office.com/calendar" label="Open Outlook Calendar" />
           </div>
         </section>
 
@@ -232,14 +221,8 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
             <ConnectionRow
               label="Gmail"
               connected={connections.gmail}
-              onConnect={() => connectProvider("google")}
-              onDisconnect={() => void disconnectProvider("gmail")}
-            />
-            <ConnectionRow
-              label="Outlook"
-              connected={connections.outlook}
-              onConnect={() => connectProvider("microsoft-entra-id")}
-              onDisconnect={() => void disconnectProvider("outlook")}
+              onConnect={connectGmail}
+              onDisconnect={() => void disconnectGmail()}
             />
           </Panel>
 
@@ -247,22 +230,10 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
             <div className="flex flex-wrap gap-2">
               <ScanButton
                 label="Scan Gmail"
-                loading={scanning === "gmail"}
+                loading={scanning}
                 disabled={!connections.gmail}
-                onClick={() => void runScan("gmail")}
-              />
-              <ScanButton
-                label="Scan Outlook"
-                loading={scanning === "outlook"}
-                disabled={!connections.outlook}
-                onClick={() => void runScan("outlook")}
-              />
-              <ScanButton
-                label="Scan All"
-                loading={scanning === "all"}
-                disabled={!connections.gmail && !connections.outlook}
                 variant="primary"
-                onClick={() => void runScan("all")}
+                onClick={() => void runScan()}
               />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
@@ -301,7 +272,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           {!scanned && (
             <EmptyState
               title="No scans yet"
-              body="Connect an inbox, then scan to pull interview-related emails."
+              body="Connect Gmail, then scan to pull interview-related emails."
             />
           )}
           {scanned && visible.length === 0 && (
@@ -472,7 +443,9 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <ProviderBadge provider={email.provider} />
+            <span className="inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground">
+              Gmail
+            </span>
             <span
               className={
                 "inline-flex items-center rounded-full border px-2 py-0.5 font-medium " +
@@ -537,7 +510,7 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
           >
             <Plus className="h-3 w-3" />
-            Add to {email.provider === "gmail" ? "Google" : "Outlook"} Calendar
+            Add to Google Calendar
           </button>
         )}
 
@@ -563,13 +536,5 @@ function Field({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="truncate font-medium text-foreground">{value}</dd>
     </div>
-  );
-}
-
-function ProviderBadge({ provider }: { provider: Provider }) {
-  return (
-    <span className="inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground">
-      {provider === "gmail" ? "Gmail" : "Outlook"}
-    </span>
   );
 }

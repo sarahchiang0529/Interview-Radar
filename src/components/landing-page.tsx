@@ -68,9 +68,8 @@ export function LandingPage() {
               Never miss an interview email again.
             </h1>
             <p className="mt-5 text-pretty text-base text-muted-foreground sm:text-lg">
-              InterviewRadar quietly scans your Gmail and Outlook, surfaces the interview
-              invitations buried in noise, and helps you add confirmed interviews to your calendar
-              in one click.
+              InterviewRadar quietly scans your Gmail, surfaces the interview invitations buried
+              in noise, and helps you add confirmed interviews to Google Calendar in one click.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
@@ -88,7 +87,7 @@ export function LandingPage() {
               </a>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              Sign in, connect Gmail or Outlook, then scan your private inbox
+              Sign in with Google, connect Gmail, then scan your private inbox
             </p>
           </div>
 
@@ -155,8 +154,7 @@ export function LandingPage() {
             </div>
             <ul className="space-y-3">
               {[
-                "Interview invites buried under 50+ job alerts a day",
-                "Two inboxes to check — personal Gmail and school/work Outlook",
+                "Interview invites buried under dozens of job alerts a day",
                 "Manually copying dates and times into your calendar",
                 "Missing follow-ups because nothing is flagged",
               ].map((p) => (
@@ -194,8 +192,8 @@ export function LandingPage() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Feature
               icon={<Inbox className="h-5 w-5" />}
-              title="Unified inbox scan"
-              body="Pull interview-related emails from Gmail and Outlook in a single view."
+              title="Gmail inbox scan"
+              body="Pull interview-related emails from Gmail into one focused view."
             />
             <Feature
               icon={<Filter className="h-5 w-5" />}
@@ -205,7 +203,7 @@ export function LandingPage() {
             <Feature
               icon={<CalendarCheck className="h-5 w-5" />}
               title="One-click calendar"
-              body="Add confirmed interviews to Google Calendar or Outlook Calendar with one click."
+              body="Add confirmed interviews to Google Calendar with one click."
             />
             <Feature
               icon={<Clock className="h-5 w-5" />}
@@ -220,7 +218,7 @@ export function LandingPage() {
             <Feature
               icon={<Mail className="h-5 w-5" />}
               title="Quick mailbox access"
-              body="Jump straight to the source email in Gmail or Outlook from any card."
+              body="Jump straight to the source email in Gmail from any card."
             />
           </div>
         </div>
@@ -242,8 +240,8 @@ export function LandingPage() {
             {[
               {
                 n: "01",
-                title: "Connect your inboxes",
-                body: "Link Gmail, Outlook, or both. Connect in seconds — disconnect anytime.",
+                title: "Connect Gmail",
+                body: "Sign in with Google and grant read access to scan for interview emails.",
               },
               {
                 n: "02",
@@ -333,7 +331,7 @@ export function LandingPage() {
               },
               {
                 q: "Which providers are supported?",
-                a: "Gmail and Outlook (personal and Microsoft 365 accounts).",
+                a: "Gmail via Google sign-in.",
               },
               {
                 q: "Will it auto-create calendar events for me?",
@@ -341,7 +339,7 @@ export function LandingPage() {
               },
               {
                 q: "How do I get started?",
-                a: "Sign in, connect Gmail or Outlook, and run a scan to pull your interview-related mail.",
+                a: "Sign in with Google, connect Gmail, and run a scan to pull your interview-related mail.",
               },
             ].map((f) => (
               <details
@@ -385,7 +383,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6">
           <div className="flex items-center gap-2">
             <Radar className="h-3.5 w-3.5" />
-            <span>InterviewRadar · Not affiliated with Google or Microsoft</span>
+            <span>InterviewRadar · Not affiliated with Google</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="#privacy" className="hover:text-foreground">

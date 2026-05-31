@@ -2,12 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db";
 import { fetchGmailInterviewEmails, createGoogleCalendarEvent } from "@/lib/gmail";
-import { fetchOutlookInterviewEmails, createOutlookCalendarEvent } from "@/lib/outlook";
 import { rowToScannedEmail } from "@/lib/email-mapper";
-import type { Provider, ScannedEmail } from "@/lib/interview-radar";
+import type { ScannedEmail } from "@/lib/interview-radar";
 import { getConnectionStatus } from "@/lib/oauth-tokens";
-
-type ScanTarget = Provider | "all";
 
 export async function listScannedEmails(userId: string): Promise<ScannedEmail[]> {
   const rows = await getDb()
@@ -71,38 +68,20 @@ async function upsertScannedEmail(
   await getDb().insert(schema.scannedEmails).values(values);
 }
 
-export async function scanInboxes(userId: string, target: ScanTarget) {
+export async function scanInboxes(userId: string) {
   const connections = await getConnectionStatus(userId);
-  const scanned: string[] = [];
 
-  if ((target === "gmail" || target === "all") && connections.gmail) {
-    const emails = await fetchGmailInterviewEmails(userId);
-    for (const email of emails) {
-      await upsertScannedEmail(userId, email);
-    }
-    scanned.push("gmail");
-  }
-
-  if ((target === "outlook" || target === "all") && connections.outlook) {
-    const emails = await fetchOutlookInterviewEmails(userId);
-    for (const email of emails) {
-      await upsertScannedEmail(userId, email);
-    }
-    scanned.push("outlook");
-  }
-
-  if (target === "gmail" && !connections.gmail) {
+  if (!connections.gmail) {
     throw new Error("Connect Gmail before scanning");
   }
-  if (target === "outlook" && !connections.outlook) {
-    throw new Error("Connect Outlook before scanning");
-  }
-  if (target === "all" && !connections.gmail && !connections.outlook) {
-    throw new Error("Connect Gmail or Outlook before scanning");
+
+  const emails = await fetchGmailInterviewEmails(userId);
+  for (const email of emails) {
+    await upsertScannedEmail(userId, email);
   }
 
   return {
-    scanned,
+    scanned: ["gmail"],
     emails: await listScannedEmails(userId),
   };
 }
@@ -122,10 +101,11 @@ export async function addEmailToCalendar(userId: string, emailId: string) {
     throw new Error("Only ready emails can be added to calendar");
   }
 
-  const event =
-    email.provider === "gmail"
-      ? await createGoogleCalendarEvent(userId, email)
-      : await createOutlookCalendarEvent(userId, email);
+  if (email.provider !== "gmail") {
+    throw new Error("Only Gmail emails can be added to calendar");
+  }
+
+  const event = await createGoogleCalendarEvent(userId, email);
 
   await getDb()
     .update(schema.scannedEmails)

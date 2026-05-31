@@ -7,7 +7,7 @@ import { DashboardClient } from "./dashboard-client";
 export const metadata: Metadata = {
   title: "Dashboard — InterviewRadar",
   description:
-    "Scan Gmail and Outlook for interview emails and add confirmed interviews to your calendar.",
+    "Scan Gmail for interview emails and add confirmed interviews to Google Calendar.",
 };
 
 export default async function DashboardPage() {

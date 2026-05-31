@@ -17,20 +17,15 @@ export async function GET() {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
   try {
     const session = await auth();
     requireSession(session);
-    const { provider } = (await request.json()) as { provider: "gmail" | "outlook" };
-    const oauthProvider = provider === "gmail" ? "google" : "microsoft-entra-id";
 
     await getDb()
       .delete(schema.accounts)
       .where(
-        and(
-          eq(schema.accounts.userId, session.user.id),
-          eq(schema.accounts.provider, oauthProvider),
-        ),
+        and(eq(schema.accounts.userId, session.user.id), eq(schema.accounts.provider, "google")),
       );
 
     return NextResponse.json({ ok: true });
