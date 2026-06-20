@@ -256,9 +256,27 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           <h2 className="text-xs font-medium text-muted-foreground">
             Quick access
           </h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <QuickLink href="https://mail.google.com" label="Open Gmail" />
-            <QuickLink href="https://calendar.google.com" label="Open Google Calendar" />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              <QuickLink href="https://mail.google.com" label="Open Gmail" />
+              <QuickLink href="https://calendar.google.com" label="Open Google Calendar" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={addGmailAccount}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              >
+                <Plus className="h-3 w-3" />
+                Add Gmail
+              </button>
+              <ScanButton
+                label="Scan all"
+                loading={scanning}
+                disabled={connectedAccounts.length === 0}
+                variant="primary"
+                onClick={() => void runScan()}
+              />
+            </div>
           </div>
         </section>
 
@@ -274,20 +292,6 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
             >
               {showAccountList ? "Collapse" : "Expand"}
             </button>
-            <button
-              onClick={addGmailAccount}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
-            >
-              <Plus className="h-3 w-3" />
-              Add Gmail
-            </button>
-            <ScanButton
-              label="Scan all"
-              loading={scanning}
-              disabled={connectedAccounts.length === 0}
-              variant="primary"
-              onClick={() => void runScan()}
-            />
           </div>
           {showAccountList && (
             <div className="mt-3 space-y-2 border-t border-border pt-3">
