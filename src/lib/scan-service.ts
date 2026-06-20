@@ -4,7 +4,25 @@ import { getDb, schema } from "@/lib/db";
 import { fetchGmailInterviewEmails, createGoogleCalendarEvent, getGoogleCalendarEvent, buildGoogleCalendarEventUrl } from "@/lib/gmail";
 import { rowToScannedEmail } from "@/lib/email-mapper";
 import type { ScannedEmail } from "@/lib/interview-radar";
+import type { CalendarEmailInput } from "@/lib/calendar-event-builder";
 import { getConnectionStatus, listGoogleAccounts, resolveGoogleAccountEmail } from "@/lib/oauth-tokens";
+import type { ScannedEmailRow } from "@/lib/db/schema";
+
+function toCalendarEmailInput(email: ScannedEmailRow): CalendarEmailInput {
+  return {
+    subject: email.subject,
+    body: email.body,
+    bodyHtml: email.bodyHtml,
+    company: email.company,
+    role: email.role,
+    interviewType: email.interviewType,
+    dateTime: email.dateTime,
+    dateTimeISO: email.dateTimeISO,
+    meetingLink: email.meetingLink,
+    sourceUrl: email.sourceUrl,
+    reviewNotes: email.reviewNotes ?? [],
+  };
+}
 
 async function getAccountEmailMap(userId: string) {
   const accounts = await listGoogleAccounts(userId);
@@ -148,7 +166,7 @@ export async function addEmailToCalendar(userId: string, emailId: string) {
     throw new Error("This email is missing its Gmail account — scan again");
   }
 
-  const event = await createGoogleCalendarEvent(userId, email.providerAccountId, email);
+  const event = await createGoogleCalendarEvent(userId, email.providerAccountId, toCalendarEmailInput(email));
 
   await getDb()
     .update(schema.scannedEmails)
@@ -221,7 +239,7 @@ export async function openOrRestoreCalendarEvent(userId: string, emailId: string
     };
   }
 
-  const event = await createGoogleCalendarEvent(userId, email.providerAccountId, email);
+  const event = await createGoogleCalendarEvent(userId, email.providerAccountId, toCalendarEmailInput(email));
 
   await getDb()
     .update(schema.scannedEmails)

@@ -1,5 +1,6 @@
 import { getAccessToken, resolveGoogleAccountEmail } from "@/lib/oauth-tokens";
 import { classifyRawEmail } from "@/lib/email-mapper";
+import { buildCalendarEventPayload, type CalendarEmailInput } from "@/lib/calendar-event-builder";
 
 export function buildGoogleCalendarEventUrl(eventId: string, calendarEmail: string) {
   const eid = Buffer.from(`${eventId} ${calendarEmail}`)
@@ -145,25 +146,10 @@ export async function fetchGmailInterviewEmails(
 export async function createGoogleCalendarEvent(
   userId: string,
   providerAccountId: string,
-  email: {
-    subject: string;
-    sender: string;
-    senderEmail: string;
-    body: string;
-    company?: string | null;
-    role?: string | null;
-    dateTimeISO?: string | null;
-  },
+  email: CalendarEmailInput,
 ) {
   const accessToken = await getAccessToken(userId, providerAccountId);
-
-  let start: Date;
-  if (email.dateTimeISO) {
-    start = new Date(email.dateTimeISO);
-  } else {
-    start = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  }
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const payload = buildCalendarEventPayload(email);
 
   const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
     method: "POST",
@@ -172,10 +158,10 @@ export async function createGoogleCalendarEvent(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      summary: `Interview: ${email.company ?? "Company"}${email.role ? ` — ${email.role}` : ""}`,
-      description: `${email.subject}\n\nFrom: ${email.sender} <${email.senderEmail}>\n\n${email.body}`,
-      start: { dateTime: start.toISOString() },
-      end: { dateTime: end.toISOString() },
+      summary: payload.summary,
+      description: payload.description,
+      start: payload.start,
+      end: payload.end,
     }),
   });
 
