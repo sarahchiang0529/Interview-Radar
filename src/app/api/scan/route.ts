@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/session";
 
 const bodySchema = z.object({
   provider: z.literal("gmail").optional(),
+  providerAccountId: z.string().optional(),
 });
 
 export async function GET() {
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     requireSession(session);
-    bodySchema.parse(await request.json().catch(() => ({})));
-    const result = await scanInboxes(session.user.id);
+    const body = bodySchema.parse(await request.json().catch(() => ({})));
+    const result = await scanInboxes(session.user.id, body.providerAccountId);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

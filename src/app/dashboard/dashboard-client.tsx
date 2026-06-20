@@ -19,12 +19,19 @@ import {
 } from "lucide-react";
 
 import { type EmailActionItem, type ScannedEmail, type Status } from "@/lib/interview-radar";
-import { signInWithGoogle } from "@/app/actions/auth";
+import { linkGoogleAccount } from "@/app/actions/auth";
 
 type Filter = "all" | Status;
 
+type GmailAccount = {
+  providerAccountId: string;
+  email: string | null;
+  connected: boolean;
+};
+
 type Connections = {
   gmail: boolean;
+  accounts: GmailAccount[];
 };
 
 const STATUS_META: Record<Status, { label: string; chipClass: string }> = {
@@ -52,6 +59,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
   const [scanning, setScanning] = useState(false);
   const [connections, setConnections] = useState<Connections>({
     gmail: false,
+    accounts: [],
   });
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState<string | null>(null);
@@ -85,24 +93,25 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
     void loadState();
   }, [loadState]);
 
-  const connectGmail = () => {
-    void signInWithGoogle();
+  const addGmailAccount = () => {
+    void linkGoogleAccount();
   };
 
-  const disconnectGmail = async () => {
+  const disconnectGmail = async (providerAccountId: string) => {
     setError(null);
-    const response = await fetch("/api/connections", {
-      method: "DELETE",
-    });
+    const response = await fetch(
+      `/api/connections?providerAccountId=${encodeURIComponent(providerAccountId)}`,
+      { method: "DELETE" },
+    );
     if (!response.ok) {
       const data = (await response.json()) as { error?: string };
       setError(data.error ?? "Failed to disconnect");
       return;
     }
-    setConnections({ gmail: false });
+    await loadState();
   };
 
-  const runScan = async () => {
+  const runScan = async (providerAccountId?: string) => {
     setScanning(true);
     setError(null);
 
@@ -110,10 +119,11 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "gmail" }),
+        body: JSON.stringify({ provider: "gmail", providerAccountId }),
       });
       const data = (await response.json()) as {
         emails?: ScannedEmail[];
+        warnings?: string[];
         error?: string;
       };
 
@@ -123,9 +133,13 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
 
       setEmails(data.emails ?? []);
       setScanned(true);
+      if (data.warnings?.length) {
+        setError(data.warnings.join(" · "));
+      }
       await loadState();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
+      await loadState();
     } finally {
       setScanning(false);
     }
@@ -148,6 +162,37 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
       setError(err instanceof Error ? err.message : "Failed to add to calendar");
     }
   };
+
+  const openCalendarEvent = async (id: string) => {
+    setError(null);
+    try {
+      const response = await fetch("/api/calendar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailId: id }),
+      });
+      const data = (await response.json()) as {
+        eventUrl?: string;
+        recreated?: boolean;
+        email?: ScannedEmail;
+        error?: string;
+      };
+      if (!response.ok || !data.eventUrl) {
+        throw new Error(data.error ?? "Failed to open calendar event");
+      }
+      if (data.email) {
+        setEmails((prev) => prev.map((e) => (e.id === id ? data.email! : e)));
+      }
+      window.open(data.eventUrl, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open calendar event");
+    }
+  };
+
+  const connectedAccounts = useMemo(
+    () => connections.accounts.filter((account) => account.connected),
+    [connections.accounts],
+  );
 
   const counts = useMemo(
     () => ({
@@ -181,7 +226,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
               InterviewRadar
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Scan Gmail for interview emails and add confirmed interviews to your Google Calendar.
+              Find interview emails in Gmail and add them to your calendar.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -217,27 +262,52 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
         </section>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <Panel title="Connections">
-            <ConnectionRow
-              label="Gmail"
-              connected={connections.gmail}
-              onConnect={connectGmail}
-              onDisconnect={() => void disconnectGmail()}
-            />
+          <Panel title="Gmail accounts">
+            {connections.accounts.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No Gmail accounts linked yet. Add one to start scanning.
+              </p>
+            ) : (
+              connections.accounts.map((account) => (
+                <ConnectionRow
+                  key={account.providerAccountId}
+                  label={account.email ?? "Google account"}
+                  connected={account.connected}
+                  onDisconnect={() => void disconnectGmail(account.providerAccountId)}
+                />
+              ))
+            )}
+            <button
+              onClick={addGmailAccount}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            >
+              <Plus className="h-3 w-3" />
+              Add Gmail account
+            </button>
           </Panel>
 
           <Panel title="Scan inbox">
             <div className="flex flex-wrap gap-2">
               <ScanButton
-                label="Scan Gmail"
+                label="Scan all inboxes"
                 loading={scanning}
-                disabled={!connections.gmail}
+                disabled={connectedAccounts.length === 0}
                 variant="primary"
                 onClick={() => void runScan()}
               />
+              {connectedAccounts.length > 1 &&
+                connectedAccounts.map((account) => (
+                  <ScanButton
+                    key={account.providerAccountId}
+                    label={`Scan ${account.email ?? "account"}`}
+                    loading={scanning}
+                    disabled={connectedAccounts.length === 0}
+                    onClick={() => void runScan(account.providerAccountId)}
+                  />
+                ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Scans the last 30 days of mail and classifies interview-related messages.
+              Scans the last 30 days from each connected Gmail account.
             </p>
           </Panel>
         </div>
@@ -272,14 +342,19 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           {!scanned && (
             <EmptyState
               title="No scans yet"
-              body="Connect Gmail, then scan to pull interview-related emails."
+              body="Add a Gmail account, then scan to pull interview-related emails."
             />
           )}
           {scanned && visible.length === 0 && (
             <EmptyState title="Nothing here" body="No emails match this filter." />
           )}
           {visible.map((email) => (
-            <EmailCard key={email.id} email={email} onAdd={() => void addToCalendar(email.id)} />
+            <EmailCard
+              key={email.id}
+              email={email}
+              onAdd={() => void addToCalendar(email.id)}
+              onOpenCalendar={() => void openCalendarEvent(email.id)}
+            />
           ))}
         </section>
 
@@ -323,35 +398,33 @@ function QuickLink({ href, label }: { href: string; label: string }) {
 function ConnectionRow({
   label,
   connected,
-  onConnect,
   onDisconnect,
 }: {
   label: string;
   connected: boolean;
-  onConnect: () => void;
   onDisconnect: () => void;
 }) {
   return (
     <div className="flex items-center justify-between border-b border-border py-2 last:border-0">
-      <div className="flex items-center gap-2 text-sm">
-        <Mail className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">{label}</span>
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="truncate font-medium">{label}</span>
         <span
           className={
-            "ml-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide " +
+            "ml-1 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide " +
             (connected
               ? "border-[var(--success)]/30 bg-[var(--success)]/12 text-[var(--success)]"
               : "border-border bg-muted text-muted-foreground")
           }
         >
-          {connected ? "Connected" : "Not connected"}
+          {connected ? "Connected" : "Needs reconnect"}
         </span>
       </div>
       <button
-        onClick={connected ? onDisconnect : onConnect}
-        className="rounded-md border border-border bg-card px-3 py-1 text-xs font-medium hover:bg-accent"
+        onClick={onDisconnect}
+        className="ml-2 shrink-0 rounded-md border border-border bg-card px-3 py-1 text-xs font-medium hover:bg-accent"
       >
-        {connected ? "Disconnect" : `Connect ${label}`}
+        Remove
       </button>
     </div>
   );
@@ -429,7 +502,15 @@ function EmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
-function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void }) {
+function EmailCard({
+  email,
+  onAdd,
+  onOpenCalendar,
+}: {
+  email: ScannedEmail;
+  onAdd: () => void;
+  onOpenCalendar: () => void;
+}) {
   const meta = STATUS_META[email.status];
   const received = new Date(email.receivedAt).toLocaleString(undefined, {
     month: "short",
@@ -444,7 +525,7 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
             <span className="inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground">
-              Gmail
+              {email.accountEmail ?? "Gmail"}
             </span>
             <span
               className={
@@ -522,15 +603,13 @@ function EmailCard({ email, onAdd }: { email: ScannedEmail; onAdd: () => void })
         )}
 
         {email.status === "added" && email.calendarEventUrl && (
-          <a
-            href={email.calendarEventUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={onOpenCalendar}
             className="inline-flex items-center gap-1.5 rounded-md border border-[var(--info)]/30 bg-[var(--info)]/10 px-3 py-1.5 text-xs font-medium text-[var(--info)] hover:opacity-90"
           >
             <CalendarIcon className="h-3 w-3" />
             Open Calendar Event
-          </a>
+          </button>
         )}
       </div>
     </article>

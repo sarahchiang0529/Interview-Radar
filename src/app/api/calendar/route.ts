@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
-import { addEmailToCalendar } from "@/lib/scan-service";
+import { addEmailToCalendar, openOrRestoreCalendarEvent } from "@/lib/scan-service";
 import { requireSession } from "@/lib/session";
 
 const bodySchema = z.object({
@@ -19,6 +19,21 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create calendar event" },
+      { status: 400 },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await auth();
+    requireSession(session);
+    const body = bodySchema.parse(await request.json());
+    const result = await openOrRestoreCalendarEvent(session.user.id, body.emailId);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to open calendar event" },
       { status: 400 },
     );
   }

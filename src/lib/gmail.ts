@@ -1,5 +1,15 @@
-import { getAccessToken } from "@/lib/oauth-tokens";
+import { getAccessToken, resolveGoogleAccountEmail } from "@/lib/oauth-tokens";
 import { classifyRawEmail } from "@/lib/email-mapper";
+
+export function buildGoogleCalendarEventUrl(eventId: string, calendarEmail: string) {
+  const eid = Buffer.from(`${eventId} ${calendarEmail}`)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return `https://calendar.google.com/calendar/event?eid=${eid}&authuser=${encodeURIComponent(calendarEmail)}`;
+}
 
 type GmailHeader = { name: string; value: string };
 
@@ -77,8 +87,12 @@ function parseSender(from: string) {
   return { sender: from, senderEmail: from };
 }
 
-export async function fetchGmailInterviewEmails(userId: string) {
-  const accessToken = await getAccessToken(userId);
+export async function fetchGmailInterviewEmails(
+  userId: string,
+  providerAccountId: string,
+  accountEmail?: string | null,
+) {
+  const accessToken = await getAccessToken(userId, providerAccountId);
   const query = encodeURIComponent(
     'newer_than:30d (interview OR schedule OR recruiter OR calendly OR "phone screen" OR "final interview")',
   );
@@ -113,6 +127,8 @@ export async function fetchGmailInterviewEmails(userId: string) {
       return classifyRawEmail({
         id: message.id,
         provider: "gmail",
+        providerAccountId,
+        accountEmail: accountEmail ?? undefined,
         subject,
         sender,
         senderEmail,
@@ -128,6 +144,7 @@ export async function fetchGmailInterviewEmails(userId: string) {
 
 export async function createGoogleCalendarEvent(
   userId: string,
+  providerAccountId: string,
   email: {
     subject: string;
     sender: string;
@@ -138,7 +155,7 @@ export async function createGoogleCalendarEvent(
     dateTimeISO?: string | null;
   },
 ) {
-  const accessToken = await getAccessToken(userId);
+  const accessToken = await getAccessToken(userId, providerAccountId);
 
   let start: Date;
   if (email.dateTimeISO) {
@@ -168,8 +185,42 @@ export async function createGoogleCalendarEvent(
   }
 
   const event = (await response.json()) as { id: string; htmlLink?: string };
+  const calendarEmail = await resolveGoogleAccountEmail(userId, providerAccountId);
+
   return {
     eventId: event.id,
-    eventUrl: event.htmlLink ?? `https://calendar.google.com/calendar/event?eid=${event.id}`,
+    eventUrl: calendarEmail
+      ? buildGoogleCalendarEventUrl(event.id, calendarEmail)
+      : (event.htmlLink ?? `https://calendar.google.com/calendar/event?eid=${event.id}`),
   };
+}
+
+export async function getGoogleCalendarEvent(
+  userId: string,
+  providerAccountId: string,
+  eventId: string,
+) {
+  const accessToken = await getAccessToken(userId, providerAccountId);
+
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+
+  if (response.status === 404 || response.status === 410) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Google Calendar lookup failed: ${text}`);
+  }
+
+  const event = (await response.json()) as { id: string; htmlLink?: string; status?: string };
+
+  if (event.status === "cancelled") {
+    return null;
+  }
+
+  return event;
 }
