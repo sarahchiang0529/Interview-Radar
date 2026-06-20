@@ -61,6 +61,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
     gmail: false,
     accounts: [],
   });
+  const [showAccountList, setShowAccountList] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -252,7 +253,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
         {loading && <div className="mt-4 text-xs text-muted-foreground">Loading dashboard…</div>}
 
         <section className="mt-6">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-xs font-medium text-muted-foreground">
             Quick access
           </h2>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -261,56 +262,50 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           </div>
         </section>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <Panel title="Gmail accounts">
-            {connections.accounts.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No Gmail accounts linked yet. Add one to start scanning.
-              </p>
-            ) : (
-              connections.accounts.map((account) => (
-                <ConnectionRow
-                  key={account.providerAccountId}
-                  label={account.email ?? "Google account"}
-                  connected={account.connected}
-                  onDisconnect={() => void disconnectGmail(account.providerAccountId)}
-                />
-              ))
-            )}
+        <section className="mt-6 rounded-lg border border-border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Gmail accounts</span>
+            <span className="text-xs text-muted-foreground">
+              {connectedAccounts.length} connected
+            </span>
+            <button
+              onClick={() => setShowAccountList((prev) => !prev)}
+              className="inline-flex items-center rounded-md border border-border bg-card px-2 py-1 text-xs font-medium hover:bg-accent"
+            >
+              {showAccountList ? "Collapse" : "Expand"}
+            </button>
             <button
               onClick={addGmailAccount}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
             >
               <Plus className="h-3 w-3" />
-              Add Gmail account
+              Add Gmail
             </button>
-          </Panel>
-
-          <Panel title="Scan inbox">
-            <div className="flex flex-wrap gap-2">
-              <ScanButton
-                label="Scan all inboxes"
-                loading={scanning}
-                disabled={connectedAccounts.length === 0}
-                variant="primary"
-                onClick={() => void runScan()}
-              />
-              {connectedAccounts.length > 1 &&
-                connectedAccounts.map((account) => (
-                  <ScanButton
+            <ScanButton
+              label="Scan all"
+              loading={scanning}
+              disabled={connectedAccounts.length === 0}
+              variant="primary"
+              onClick={() => void runScan()}
+            />
+          </div>
+          {showAccountList && (
+            <div className="mt-3 space-y-2 border-t border-border pt-3">
+              {connections.accounts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No linked accounts yet.</p>
+              ) : (
+                connections.accounts.map((account) => (
+                  <ConnectionRow
                     key={account.providerAccountId}
-                    label={`Scan ${account.email ?? "account"}`}
-                    loading={scanning}
-                    disabled={connectedAccounts.length === 0}
-                    onClick={() => void runScan(account.providerAccountId)}
+                    label={account.email ?? "Google account"}
+                    connected={account.connected}
+                    onDisconnect={() => void disconnectGmail(account.providerAccountId)}
                   />
-                ))}
+                ))
+              )}
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Scans the last 30 days from each connected Gmail account.
-            </p>
-          </Panel>
-        </div>
+          )}
+        </section>
 
         <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Stat icon={<Inbox className="h-4 w-4" />} label="Emails scanned" value={counts.total} />
@@ -375,7 +370,7 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -405,24 +400,24 @@ function ConnectionRow({
   onDisconnect: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-border py-2 last:border-0">
-      <div className="flex min-w-0 items-center gap-2 text-sm">
-        <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <div className="flex items-center justify-between rounded-md border border-border bg-background px-2.5 py-1.5 text-xs">
+      <div className="flex min-w-0 items-center gap-2">
+        <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         <span className="truncate font-medium">{label}</span>
-        <span
-          className={
-            "ml-1 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide " +
-            (connected
-              ? "border-[var(--success)]/30 bg-[var(--success)]/12 text-[var(--success)]"
-              : "border-border bg-muted text-muted-foreground")
-          }
-        >
-          {connected ? "Connected" : "Needs reconnect"}
-        </span>
       </div>
+      <span
+        className={
+          "inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] " +
+          (connected
+            ? "border-[var(--success)]/30 bg-[var(--success)]/12 text-[var(--success)]"
+            : "border-border bg-muted text-muted-foreground")
+        }
+      >
+        {connected ? "Connected" : "Reconnect"}
+      </span>
       <button
         onClick={onDisconnect}
-        className="ml-2 shrink-0 rounded-md border border-border bg-card px-3 py-1 text-xs font-medium hover:bg-accent"
+        className="ml-2 shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         Remove
       </button>
@@ -444,7 +439,7 @@ function ScanButton({
   variant?: "default" | "primary";
 }) {
   const base =
-    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition disabled:opacity-60";
+    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition disabled:opacity-60";
   const styles =
     variant === "primary"
       ? "bg-primary text-primary-foreground hover:opacity-90"
@@ -524,7 +519,7 @@ function EmailCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground">
+            <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               {email.accountEmail ?? "Gmail"}
             </span>
             <span
