@@ -22,7 +22,10 @@ function deriveReviewNotes(row: ScannedEmailRow) {
   return extractReviewNotes(row.body);
 }
 
-export function rowToScannedEmail(row: ScannedEmailRow): ScannedEmail {
+export function rowToScannedEmail(
+  row: ScannedEmailRow,
+  accountEmail?: string | null,
+): ScannedEmail {
   const actionItems = deriveActionItems(row);
   const reviewNotes = deriveReviewNotes(row);
   const evidence =
@@ -33,6 +36,8 @@ export function rowToScannedEmail(row: ScannedEmailRow): ScannedEmail {
   return {
     id: row.id,
     provider: row.provider,
+    providerAccountId: row.providerAccountId || undefined,
+    accountEmail: accountEmail ?? undefined,
     subject: row.subject,
     sender: row.sender,
     senderEmail: row.senderEmail,
@@ -59,6 +64,8 @@ export function rowToScannedEmail(row: ScannedEmailRow): ScannedEmail {
 export function classifyRawEmail(input: {
   id: string;
   provider: Provider;
+  providerAccountId: string;
+  accountEmail?: string;
   subject: string;
   sender: string;
   senderEmail: string;
@@ -69,7 +76,10 @@ export function classifyRawEmail(input: {
   role?: string;
   interviewType?: string;
   webLink?: string;
-}): Omit<ScannedEmail, "id"> & { externalId: string } {
+}): Omit<ScannedEmail, "id" | "providerAccountId"> & {
+  externalId: string;
+  providerAccountId: string;
+} {
   const actionItems = extractActionItems(input.body, input.bodyHtml);
   const reviewNotes = extractReviewNotes(input.body);
   const requiresScheduling = requiresInterviewScheduling(input.body, actionItems);
@@ -97,6 +107,7 @@ export function classifyRawEmail(input: {
 
   return {
     externalId: input.id,
+    providerAccountId: input.providerAccountId,
     provider: input.provider,
     subject: input.subject,
     sender: input.sender,
@@ -111,7 +122,7 @@ export function classifyRawEmail(input: {
     reviewNotes,
     ...cls,
     evidence,
-    sourceUrl: buildSourceUrl(input.provider, input.id, input.webLink),
+    sourceUrl: buildSourceUrl(input.provider, input.id, input.webLink, input.accountEmail),
   };
 }
 

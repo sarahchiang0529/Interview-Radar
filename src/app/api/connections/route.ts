@@ -1,9 +1,12 @@
-import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { getDb, schema } from "@/lib/db";
-import { getConnectionStatus } from "@/lib/oauth-tokens";
+import {
+  disconnectGoogleAccount,
+  getConnectionStatus,
+  listGoogleAccounts,
+} from "@/lib/oauth-tokens";
+import { removeScannedEmailsForAccount } from "@/lib/scan-service";
 import { requireSession } from "@/lib/session";
 
 export async function GET() {
@@ -17,16 +20,23 @@ export async function GET() {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     const session = await auth();
     requireSession(session);
+    const providerAccountId = new URL(request.url).searchParams.get("providerAccountId");
 
-    await getDb()
-      .delete(schema.accounts)
-      .where(
-        and(eq(schema.accounts.userId, session.user.id), eq(schema.accounts.provider, "google")),
-      );
+    if (!providerAccountId) {
+      return NextResponse.json({ error: "providerAccountId is required" }, { status: 400 });
+    }
+
+    const accounts = await listGoogleAccounts(session.user.id);
+    if (!accounts.some((account) => account.providerAccountId === providerAccountId)) {
+      return NextResponse.json({ error: "Gmail account not found" }, { status: 404 });
+    }
+
+    await disconnectGoogleAccount(session.user.id, providerAccountId);
+    await removeScannedEmailsForAccount(session.user.id, providerAccountId);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

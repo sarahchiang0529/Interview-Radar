@@ -4,6 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import type { Provider } from "next-auth/providers";
 
 import { getDb, schema } from "@/lib/db";
+import { syncGoogleAccountEmail } from "@/lib/oauth-tokens";
 
 const providers: Provider[] = [];
 
@@ -44,6 +45,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "database" },
   providers,
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google" && account.providerAccountId && profile?.email) {
+        await syncGoogleAccountEmail(account.providerAccountId, profile.email);
+      }
+      return true;
+    },
     session({ session, user }) {
       if (session.user && user.id) {
         session.user.id = user.id;

@@ -40,6 +40,7 @@ export const accounts = pgTable(
     scope: text("scope"),
     id_token: text("id_token"),
     session_state: text("session_state"),
+    accountEmail: text("account_email"),
   },
   (account) => [primaryKey({ columns: [account.provider, account.providerAccountId] })],
 );
@@ -71,6 +72,7 @@ export const scannedEmails = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    providerAccountId: text("provider_account_id").notNull().default(""),
     externalId: text("external_id").notNull(),
     provider: emailProviderEnum("provider").notNull(),
     subject: text("subject").notNull(),
@@ -109,9 +111,10 @@ export const scannedEmails = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("scanned_emails_user_provider_external_idx").on(
+    uniqueIndex("scanned_emails_user_account_external_idx").on(
       table.userId,
       table.provider,
+      table.providerAccountId,
       table.externalId,
     ),
   ],

@@ -12,6 +12,8 @@ export type EmailActionItem = {
 export interface ScannedEmail {
   id: string;
   provider: Provider;
+  providerAccountId?: string;
+  accountEmail?: string;
   subject: string;
   sender: string;
   senderEmail: string;
@@ -375,9 +377,15 @@ export function classify(
   };
 }
 
-export function buildSourceUrl(provider: Provider, id: string, webLink?: string): string {
+export function buildSourceUrl(
+  provider: Provider,
+  id: string,
+  webLink?: string,
+  accountEmail?: string,
+): string {
   if (provider === "gmail") {
-    return `https://mail.google.com/mail/u/0/#inbox/${id}`;
+    const authUser = accountEmail ? `?authuser=${encodeURIComponent(accountEmail)}` : "";
+    return `https://mail.google.com/mail/${authUser}#inbox/${id}`;
   }
 
   return webLink ?? `https://outlook.office.com/mail/inbox/id/${id}`;
