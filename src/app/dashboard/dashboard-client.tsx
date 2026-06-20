@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Radar,
-  Mail,
   Calendar as CalendarIcon,
   ExternalLink,
   RefreshCw,
@@ -34,22 +33,26 @@ type Connections = {
   accounts: GmailAccount[];
 };
 
-const STATUS_META: Record<Status, { label: string; chipClass: string }> = {
+const STATUS_META: Record<Status, { label: string; chipClass: string; iconClass: string }> = {
   ready: {
     label: "Ready to Add",
     chipClass: "bg-[var(--success)]/12 text-[var(--success)] border-[var(--success)]/30",
+    iconClass: "bg-[var(--success)]/12 text-[var(--success)]",
   },
   review: {
     label: "Needs Review",
     chipClass: "bg-[var(--warning)]/15 text-[var(--warning-foreground)] border-[var(--warning)]/40",
+    iconClass: "bg-[var(--warning)]/15 text-[var(--warning-foreground)]",
   },
   ignored: {
     label: "Ignored",
     chipClass: "bg-muted text-muted-foreground border-border",
+    iconClass: "bg-muted text-muted-foreground",
   },
   added: {
     label: "Added to Calendar",
     chipClass: "bg-[var(--info)]/12 text-[var(--info)] border-[var(--info)]/30",
+    iconClass: "bg-[var(--info)]/12 text-[var(--info)]",
   },
 };
 
@@ -258,8 +261,12 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
           </h2>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
-              <QuickLink href="https://mail.google.com" label="Open Gmail" />
-              <QuickLink href="https://calendar.google.com" label="Open Google Calendar" />
+              <QuickLink href="https://mail.google.com" label="Open Gmail" icon={<GmailIcon />} />
+              <QuickLink
+                href="https://calendar.google.com"
+                label="Open Google Calendar"
+                icon={<GoogleCalendarIcon />}
+              />
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -312,18 +319,35 @@ export function DashboardClient({ userName }: { userName?: string | null }) {
         </section>
 
         <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Stat icon={<Inbox className="h-4 w-4" />} label="Emails scanned" value={counts.total} />
-          <Stat icon={<Check className="h-4 w-4" />} label="Ready to add" value={counts.ready} />
+          <Stat
+            icon={<Inbox className="h-4 w-4" />}
+            label="Emails scanned"
+            value={counts.total}
+            iconClass="bg-muted text-muted-foreground"
+          />
+          <Stat
+            icon={<Check className="h-4 w-4" />}
+            label="Ready to add"
+            value={counts.ready}
+            iconClass={STATUS_META.ready.iconClass}
+          />
           <Stat
             icon={<AlertCircle className="h-4 w-4" />}
             label="Needs review"
             value={counts.review}
+            iconClass={STATUS_META.review.iconClass}
           />
-          <Stat icon={<ArchiveX className="h-4 w-4" />} label="Ignored" value={counts.ignored} />
+          <Stat
+            icon={<ArchiveX className="h-4 w-4" />}
+            label="Ignored"
+            value={counts.ignored}
+            iconClass={STATUS_META.ignored.iconClass}
+          />
           <Stat
             icon={<CalendarCheck className="h-4 w-4" />}
             label="Added to calendar"
             value={counts.added}
+            iconClass={STATUS_META.added.iconClass}
           />
         </section>
 
@@ -380,7 +404,15 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function QuickLink({
+  href,
+  label,
+  icon,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}) {
   return (
     <a
       href={href}
@@ -388,9 +420,31 @@ function QuickLink({ href, label }: { href: string; label: string }) {
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent"
     >
-      <ExternalLink className="h-3 w-3" />
+      {icon}
       {label}
     </a>
+  );
+}
+
+function GmailIcon() {
+  return (
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg"
+      alt=""
+      className="h-5 w-5 shrink-0"
+      draggable={false}
+    />
+  );
+}
+
+function GoogleCalendarIcon() {
+  return (
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg"
+      alt=""
+      className="h-5 w-5 shrink-0"
+      draggable={false}
+    />
   );
 }
 
@@ -406,7 +460,9 @@ function ConnectionRow({
   return (
     <div className="flex items-center justify-between rounded-md border border-border bg-background px-2.5 py-1.5 text-xs">
       <div className="flex min-w-0 items-center gap-2">
-        <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className="inline-flex h-5 w-5 items-center justify-center shrink-0">
+          <GmailIcon />
+        </span>
         <span className="truncate font-medium">{label}</span>
       </div>
       <span
@@ -456,11 +512,28 @@ function ScanButton({
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+function Stat({
+  icon,
+  label,
+  value,
+  iconClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  iconClass?: string;
+}) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}
+        <span
+          className={
+            "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md " +
+            (iconClass ?? "text-muted-foreground")
+          }
+        >
+          {icon}
+        </span>
         <span>{label}</span>
       </div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
